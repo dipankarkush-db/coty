@@ -399,43 +399,85 @@ WHERE fiscal_year = '2025';
 
 ### Step 2: Create the Metric View
 
-The metric view sits on top of the base SQL view and provides clean, governed measures and dimensions for Genie.
+The metric view sits on top of the base SQL view and provides clean, governed measures and dimensions for Genie. Metric views in Databricks use **YAML syntax** with `WITH METRICS LANGUAGE YAML`.
+
+> **Important:** Metric views do NOT support `SELECT *`. You must explicitly reference measures using the `MEASURE()` function and dimensions by name, with `GROUP BY ALL`.
 
 ```sql
-CREATE OR REPLACE METRIC VIEW cotydatacloud_pro.gold_finance.mv_capex
-AS SELECT * FROM cotydatacloud_pro.gold_finance.vw_capex_summary
-WITH (
-    -- DIMENSIONS (filter/group-by columns)
-    fiscal_year DIMENSION
-        COMMENT 'The fiscal year for the CapEx calculation (e.g., 2025, 2024)',
+CREATE OR REPLACE VIEW cotydatacloud_pro.gold_finance.mv_capex
+WITH METRICS
+LANGUAGE YAML
+AS $$
+  version: 1.1
+  comment: "Capital Expenditure (CapEx) metrics for financial analysis. CapEx = (Current Year Closing Balance - Prior Year Closing Balance) - Additions. All values converted to USD."
+  source: cotydatacloud_pro.gold_finance.vw_capex_summary
 
-    -- PRIMARY MEASURE
-    total_capex MEASURE SUM DEFAULT
-        COMMENT 'Total Capital Expenditure = (Current Year Closing Balance - Prior Year Closing Balance) - Additions. A negative value indicates net capital spending.',
+  dimensions:
+    - name: fiscal_year
+      expr: fiscal_year
+      comment: "The fiscal year for the CapEx calculation (e.g., 2025, 2024)"
 
-    -- SUPPLEMENTARY MEASURES (for drill-down questions)
-    change_yoy MEASURE SUM
-        COMMENT 'Year-over-year change in closing balance for fixed asset accounts S270 and S271, converted to USD',
+  measures:
+    - name: total_capex
+      expr: SUM(total_capex)
+      comment: "Total Capital Expenditure = (Current Year Closing Balance - Prior Year Closing Balance) - Additions. A negative value indicates net capital spending."
 
-    total_additions MEASURE SUM
-        COMMENT 'Total additions to fixed assets (accounts S211-S221) during the fiscal year, converted to USD',
+    - name: change_yoy
+      expr: SUM(change_yoy)
+      comment: "Year-over-year change in closing balance for fixed asset accounts S270 and S271, converted to USD"
 
-    prior_year_closing_balance MEASURE SUM
-        COMMENT 'Closing balance of fixed asset accounts S270 and S271 from the prior fiscal year, converted to USD',
+    - name: total_additions
+      expr: SUM(total_additions)
+      comment: "Total additions to fixed assets (accounts S211-S221) during the fiscal year, converted to USD"
 
-    current_year_closing_balance MEASURE SUM
-        COMMENT 'Closing balance of fixed asset accounts S270 and S271 for the current fiscal year, converted to USD'
-);
+    - name: prior_year_closing_balance
+      expr: SUM(prior_year_closing_balance)
+      comment: "Closing balance of fixed asset accounts S270 and S271 from the prior fiscal year, converted to USD"
+
+    - name: current_year_closing_balance
+      expr: SUM(current_year_closing_balance)
+      comment: "Closing balance of fixed asset accounts S270 and S271 for the current fiscal year, converted to USD"
+$$;
 ```
 
-#### Validation
+#### Querying Metric Views
+
+Metric views require the `MEASURE()` function to reference measures. `SELECT *` is **not supported**.
 
 ```sql
-SELECT * FROM cotydatacloud_pro.gold_finance.mv_capex
-WHERE fiscal_year = '2025';
+-- Get total CapEx for FY2025
+SELECT
+  fiscal_year,
+  MEASURE(total_capex)
+FROM cotydatacloud_pro.gold_finance.mv_capex
+WHERE fiscal_year = '2025'
+GROUP BY ALL;
+
+-- Get all measures for FY2025
+SELECT
+  fiscal_year,
+  MEASURE(total_capex),
+  MEASURE(change_yoy),
+  MEASURE(total_additions),
+  MEASURE(prior_year_closing_balance),
+  MEASURE(current_year_closing_balance)
+FROM cotydatacloud_pro.gold_finance.mv_capex
+WHERE fiscal_year = '2025'
+GROUP BY ALL;
+
+-- Get CapEx across all fiscal years
+SELECT
+  fiscal_year,
+  MEASURE(total_capex)
+FROM cotydatacloud_pro.gold_finance.mv_capex
+GROUP BY ALL;
 ```
 
-Expected: same results as the base view validation above.
+**Expected result for FY2025:**
+
+| fiscal_year | total_capex | change_yoy | total_additions | prior_year_closing_balance | current_year_closing_balance |
+|-------------|-------------|------------|-----------------|---------------------------|------------------------------|
+| 2025 | -222,953,855.77 | -22,117,307.56 | 200,836,548.21 | 108,300,130.44 | 86,182,822.88 |
 
 ---
 
@@ -492,8 +534,17 @@ Verify: `total_capex = -222,953,855.77` (matches original query)
 ### Test 2: Metric View Accuracy
 
 ```sql
-SELECT * FROM cotydatacloud_pro.gold_finance.mv_capex
-WHERE fiscal_year = '2025';
+-- NOTE: SELECT * is NOT supported on metric views. Use MEASURE() syntax.
+SELECT
+  fiscal_year,
+  MEASURE(total_capex),
+  MEASURE(change_yoy),
+  MEASURE(total_additions),
+  MEASURE(prior_year_closing_balance),
+  MEASURE(current_year_closing_balance)
+FROM cotydatacloud_pro.gold_finance.mv_capex
+WHERE fiscal_year = '2025'
+GROUP BY ALL;
 ```
 
 Verify: same results as Test 1

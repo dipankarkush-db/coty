@@ -37,6 +37,8 @@
 # filter: o_orderdate > '1990-01-01'
 
 # dimensions:
+#   - name: Order Year
+#     expr: "DATE_TRUNC('YEAR', o_orderdate)"
 #   - name: Order Month
 #     expr: "date_format(o_orderdate, 'MMMM')"
 #   - name: Order Month Date
@@ -63,6 +65,12 @@
 #     expr: SUM(o_totalprice) / count(distinct o_custkey)
 #   - name: Total Revenue for Open Orders
 #     expr: SUM(o_totalprice) filter (where o_orderstatus='O')
+#   - name: Total Revenue Prior Year
+#     expr: SUM(o_totalprice)
+#     window:
+#       - order: Order Year
+#         semiadditive: last
+#         range: trailing 1 year
 #   - name: Total Revenue Prior Month
 #     expr: SUM(o_totalprice)
 #     window:

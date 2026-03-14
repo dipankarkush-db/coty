@@ -98,16 +98,32 @@
 # MAGIC SELECT
 # MAGIC     `Order Month Date` as current_month,
 # MAGIC     `Order Status` as order_status,
+# MAGIC     MEASURE(`Total Revenue`) as total_revenue,
+# MAGIC     MEASURE(`Total Revenue Prior Month`) as total_revenue_prior_month,
+# MAGIC     MEASURE(`Revenue MoM Difference`) as revenue_mom_difference,
+# MAGIC     MEASURE(`Total Revenue per Customer`) as total_revenue_per_customer,
+# MAGIC     MEASURE(`Order Count`) as order_count
+# MAGIC   FROM
+# MAGIC     demo_orders_metric_view
+# MAGIC   WHERE date_format(`Order Month Date`, 'MMMM') = :month
+# MAGIC   GROUP BY ALL
+# MAGIC   ORDER BY `Order Month Date` ASC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT
+# MAGIC     `Order Status` as order_status,
 # MAGIC     MEASURE(`Order Count`) as order_count,
 # MAGIC     MEASURE(`Total Revenue`) as total_revenue,
 # MAGIC     MEASURE(`Total Revenue Prior Month`) as total_revenue_prior_month,
 # MAGIC     MEASURE(`Total Revenue per Customer`) as total_revenue_per_customer,
 # MAGIC     MEASURE(`Revenue MoM Difference`) as revenue_mom_difference
 # MAGIC   FROM
-# MAGIC     demo_orders_metric_view
+# MAGIC     dkushari_uc.metric_view_schema.demo_orders_metric_view
 # MAGIC   WHERE date_format(`Order Month Date`, 'MMMM') = :month
-# MAGIC   GROUP BY ALL
-# MAGIC   ORDER BY `Order Month Date` ASC
+# MAGIC   GROUP BY order_status;
+# MAGIC
 
 # COMMAND ----------
 
@@ -121,11 +137,62 @@
 # MAGIC     MEASURE(`Total Revenue per Customer`) as total_revenue_per_customer,
 # MAGIC     MEASURE(`Revenue MoM Difference`) as revenue_mom_difference
 # MAGIC   FROM
-# MAGIC     demo_orders_metric_view
+# MAGIC     dkushari_uc.metric_view_schema.demo_orders_metric_view
 # MAGIC   WHERE date_format(`Order Month Date`, 'MMMM') = :month
 # MAGIC   GROUP BY ALL
 # MAGIC   ORDER BY `Order Month Date` ASC
 # MAGIC  
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT
+# MAGIC     `Order Status` as order_status, 
+# MAGIC     MEASURE(`Order Count`) as order_count,
+# MAGIC     MEASURE(`Total Revenue`) as total_revenue,
+# MAGIC     MEASURE(`Total Revenue Prior Year`) as total_revenue_prior_year
+# MAGIC   FROM
+# MAGIC     dkushari_uc.metric_view_schema.demo_orders_metric_view
+# MAGIC   WHERE date_format(`Order Year`, 'yyyy') = :year -- for year = 1995
+# MAGIC   GROUP BY ALL
+# MAGIC   ORDER BY 1;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT
+# MAGIC     `Order Status`, 
+# MAGIC     date_format(`Order Year`, 'yyyy') order_year,
+# MAGIC     MEASURE(`Order Count`) as order_count,
+# MAGIC     MEASURE(`Total Revenue`) as total_revenue,
+# MAGIC     MEASURE(`Total Revenue Prior Year`) as total_revenue_prior_year
+# MAGIC   FROM
+# MAGIC     dkushari_uc.metric_view_schema.demo_orders_metric_view
+# MAGIC   --WHERE date_format(`Order Year`, 'yyyy') = :year
+# MAGIC   GROUP BY ALL
+# MAGIC   ORDER BY order_year;
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql   
+# MAGIC SELECT
+# MAGIC     date_format(`Order Year`, 'yyyy') order_year,
+# MAGIC     MEASURE(`Order Count`) as order_count,
+# MAGIC     MEASURE(`Total Revenue`) as total_revenue,
+# MAGIC     MEASURE(`Total Revenue Prior Year`) as total_revenue_prior_year
+# MAGIC   FROM
+# MAGIC     dkushari_uc.metric_view_schema.demo_orders_metric_view
+# MAGIC   GROUP BY ALL
+# MAGIC   ORDER BY order_year;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select date_format(DATE_TRUNC('YEAR', o_orderdate), 'yyyy') order_year, sum(o_totalprice) yearly_revenue
+# MAGIC from   dkushari_uc.metric_view_demo.orders
+# MAGIC group by order_year
+# MAGIC order by 1;
 
 # COMMAND ----------
 
